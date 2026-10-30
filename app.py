@@ -1,7 +1,6 @@
 import streamlit as st
 import joblib
 import pandas as pd
-import datetime
 
 model = joblib.load("model.joblib")
 
@@ -21,23 +20,25 @@ def category(aqi):
 
 
 st.title("Bengaluru AQI Predictor")
-st.write("Enter today's readings to get a forecast for tomorrow. "
-         "You can find live readings on the CPCB website or on aqi.in.")
+st.write("Predict tomorrow's air quality in Bengaluru from today's readings. "
+         "You can find today's readings for your area on aqi.in or the CPCB website.")
 
-today = st.number_input("Today's AQI", 0, 500, 100)
-yesterday = st.number_input("Yesterday's AQI", 0, 500, 100)
-avg7 = st.number_input("Average AQI of the last 7 days", 0, 500, 100)
-pm25 = st.number_input("Today's PM2.5", 0.0, 500.0, 40.0)
-pm10 = st.number_input("Today's PM10", 0.0, 600.0, 80.0)
+today = st.number_input(
+    "Today's AQI", 0, 500, 100,
+    help="The main air quality number (0 to 500). Lower is better.")
+pm25 = st.number_input(
+    "Today's PM2.5 (µg/m³)", 0.0, 500.0, 40.0,
+    help="Very fine particles from vehicles, smoke and burning. Usually listed just below the AQI.")
+pm10 = st.number_input(
+    "Today's PM10 (µg/m³)", 0.0, 600.0, 80.0,
+    help="Coarser particles such as road and construction dust. Usually listed next to PM2.5.")
 
 if st.button("Predict tomorrow's AQI"):
-    X = pd.DataFrame(
-        [[today, yesterday, avg7, pm25, pm10, datetime.date.today().month]],
-        columns=["AQI", "AQI_lag1", "AQI_roll7", "PM2.5", "PM10", "month"],
-    )
-    pred = float(model.predict(X)[0])
+    X = pd.DataFrame([[today, pm25, pm10]], columns=["AQI", "PM2.5", "PM10"])
+    pred = max(0.0, min(500.0, float(model.predict(X)[0])))
     cat, advice = category(pred)
-    st.metric("Predicted AQI for tomorrow", f"{pred:.0f}", cat, delta_color="off")
+    st.metric("Predicted AQI for tomorrow", f"{pred:.0f}")
+    st.subheader(cat)
     st.info(advice)
 
 st.caption("Educational project. Trained on 2015-2020 CPCB data for Bengaluru. "
